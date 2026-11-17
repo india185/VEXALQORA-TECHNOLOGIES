@@ -42,8 +42,7 @@ import {
   getAuth,
   signInAnonymously,
   signInWithCustomToken,
-  onAuthStateChanged,
-  User as FirebaseUser
+  onAuthStateChanged
 } from 'firebase/auth';
 import {
   getFirestore,
@@ -59,15 +58,9 @@ import {
 // ============================================================================
 // 1. FIREBASE INITIALIZATION
 // ============================================================================
-declare global {
-  interface Window {
-    THREE?: any;
-  }
-}
-
 const firebaseConfig =
-  typeof (window as any).__firebase_config !== 'undefined'
-    ? JSON.parse((window as any).__firebase_config)
+  typeof window.__firebase_config !== 'undefined'
+    ? JSON.parse(window.__firebase_config)
     : {
         apiKey: 'AIzaSyDemoKeyForVexalqoraTech3DApp',
         authDomain: 'vexalqora-tech.firebaseapp.com',
@@ -81,120 +74,14 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const appId =
-  typeof (window as any).__app_id !== 'undefined'
-    ? (window as any).__app_id
+  typeof window.__app_id !== 'undefined'
+    ? window.__app_id
     : 'vexalqora-technologies-3d-v4';
 
 // ============================================================================
-// 2. TYPES & INTERFACES
+// 2. CONFIGURATION & DATA CONSTANTS
 // ============================================================================
-type UserRole = 'guest' | 'customer' | 'admin';
-type BackgroundTheme = 'cybernetic' | 'quantum' | 'neonGrid' | 'holographic' | 'nebula' | 'minimalist';
-
-interface CustomerProfile {
-  id: string;
-  username: string;
-  password: string;
-  name: string;
-  email: string;
-  company: string;
-  phone: string;
-  role: 'customer';
-  status: 'Active' | 'Suspended';
-  createdAt: string;
-}
-
-interface ServiceItem {
-  id: string;
-  title: string;
-  category: string;
-  description: string;
-  deliveryTime: string;
-  featured: boolean;
-}
-
-interface ProjectRecord {
-  id: string;
-  customerId: string;
-  customerName: string;
-  title: string;
-  serviceType: string;
-  status: 'Discovery' | 'In Development' | 'QA & Security' | 'Completed' | 'Delivered';
-  progress: number;
-  deadline: string;
-  launchedUrl?: string;
-  launchedFileCode?: string;
-}
-
-interface OrderRecord {
-  id: string;
-  customerId: string;
-  customerName: string;
-  customerUsername?: string;
-  customerEmail: string;
-  serviceId: string;
-  serviceTitle: string;
-  planType: 'website' | 'combo';
-  price: number;
-  requirements: string;
-  status: 'Pending' | 'Approved' | 'In Progress' | 'Review' | 'Completed' | 'Delivered' | 'Cancelled';
-  updatedAt?: string;
-  createdAt: string;
-}
-
-interface ReviewRecord {
-  id: string;
-  customerId: string;
-  customerName: string;
-  rating: number; // 1 to 5
-  reviewText: 'Bad' | 'Good' | 'Very Good' | 'Excellent';
-  comment: string;
-  createdAt: string;
-}
-
-interface TicketRecord {
-  id: string;
-  customerId: string;
-  customerName: string;
-  subject: string;
-  priority: 'Low' | 'Medium' | 'High' | 'Critical';
-  status: 'Open' | 'In Progress' | 'Resolved';
-  message: string;
-  adminReply?: string;
-  createdAt: string;
-}
-
-interface InvoiceRecord {
-  id: string;
-  invoiceNumber: string;
-  customerId: string;
-  customerName: string;
-  orderTitle: string;
-  amount: number;
-  status: 'Paid' | 'Unpaid' | 'Overdue';
-  dueDate: string;
-}
-
-interface ContactInquiry {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  company: string;
-  subject: string;
-  message: string;
-  status?: 'New' | 'Contacted' | 'Resolved';
-  createdAt: string;
-}
-
-interface SiteContentConfig {
-  heroBadge: string;
-  heroTitle: string;
-  heroSubtitle: string;
-  aboutMission: string;
-}
-
-const DEFAULT_SITE_CONTENT: SiteContentConfig = {
+const DEFAULT_SITE_CONTENT = {
   heroBadge: 'VEXALQORA TECHNOLOGIES • 3D DIGITAL & INDUSTRIAL SYSTEMS',
   heroTitle: 'Real-Time Three.js Visualization, Live IoT Sensor Overlays & High-Growth Web Systems',
   heroSubtitle:
@@ -203,7 +90,7 @@ const DEFAULT_SITE_CONTENT: SiteContentConfig = {
     'At VEXALQORA TECHNOLOGIES, we unite interactive 3D engineering, live IoT telemetry, custom web applications, and performance-driven Meta Ads marketing to accelerate modern businesses.'
 };
 
-const INITIAL_SERVICES: Omit<ServiceItem, 'id'>[] = [
+const INITIAL_SERVICES = [
   {
     title: 'Website Development',
     category: 'Web Engineering',
@@ -230,7 +117,7 @@ const INITIAL_SERVICES: Omit<ServiceItem, 'id'>[] = [
   }
 ];
 
-const THEME_OPTIONS: { id: BackgroundTheme; label: string; desc: string; swatch: string }[] = [
+const THEME_OPTIONS = [
   { id: 'cybernetic', label: 'Cybernetic Core', desc: '3D Icosahedron & Gyro Rings', swatch: 'from-cyan-400 to-blue-600' },
   { id: 'quantum', label: 'Quantum Helix', desc: '3D DNA Torus Knot & Orbitals', swatch: 'from-violet-400 to-fuchsia-600' },
   { id: 'neonGrid', label: 'Neon Matrix', desc: 'Infinite 3D Wave Terrain & Cubes', swatch: 'from-emerald-400 to-teal-600' },
@@ -242,15 +129,10 @@ const THEME_OPTIONS: { id: BackgroundTheme; label: string; desc: string; swatch:
 // ============================================================================
 // 4. INTERACTIVE 3D WEBGL SCENE COMPONENT WITH 6 THEME MODES
 // ============================================================================
-interface ThreeSceneProps {
-  role: UserRole;
-  bgTheme: BackgroundTheme;
-}
-
-const ThreeBackgroundScene: React.FC<ThreeSceneProps> = ({ role, bgTheme }) => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const roleRef = useRef<UserRole>(role);
-  const themeRef = useRef<BackgroundTheme>(bgTheme);
+const ThreeBackgroundScene = ({ role, bgTheme }) => {
+  const containerRef = useRef(null);
+  const roleRef = useRef(role);
+  const themeRef = useRef(bgTheme);
 
   useEffect(() => {
     roleRef.current = role;
@@ -264,16 +146,16 @@ const ThreeBackgroundScene: React.FC<ThreeSceneProps> = ({ role, bgTheme }) => {
     const container = containerRef.current;
     if (!container) return;
 
-    let animationFrameId: number;
-    let renderer: any;
-    let scene: any;
-    let camera: any;
-    let mainGroup: any;
-    let particles: any;
-    let gridHelper: any;
+    let animationFrameId;
+    let renderer;
+    let scene;
+    let camera;
+    let mainGroup;
+    let particles;
+    let gridHelper;
     let mouseX = 0;
     let mouseY = 0;
-    let currentBuiltTheme: BackgroundTheme | null = null;
+    let currentBuiltTheme = null;
 
     const initThree = () => {
       const THREE = window.THREE;
@@ -307,7 +189,7 @@ const ThreeBackgroundScene: React.FC<ThreeSceneProps> = ({ role, bgTheme }) => {
       pointLight2.position.set(-10, -8, 10);
       scene.add(pointLight2);
 
-      const getPalette = (r: UserRole, t: BackgroundTheme) => {
+      const getPalette = (r, t) => {
         if (r === 'admin') {
           return { primary: 0xf43f5e, secondary: 0xf59e0b, accent: 0xfb7185 };
         }
@@ -331,7 +213,7 @@ const ThreeBackgroundScene: React.FC<ThreeSceneProps> = ({ role, bgTheme }) => {
         }
       };
 
-      const buildThemeScene = (t: BackgroundTheme) => {
+      const buildThemeScene = (t) => {
         if (mainGroup) scene.remove(mainGroup);
         if (particles) scene.remove(particles);
         if (gridHelper) scene.remove(gridHelper);
@@ -512,7 +394,7 @@ const ThreeBackgroundScene: React.FC<ThreeSceneProps> = ({ role, bgTheme }) => {
 
       buildThemeScene(themeRef.current);
 
-      const onPointerMove = (e: MouseEvent) => {
+      const onPointerMove = (e) => {
         mouseX = (e.clientX / window.innerWidth) * 2 - 1;
         mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
       };
@@ -561,7 +443,7 @@ const ThreeBackgroundScene: React.FC<ThreeSceneProps> = ({ role, bgTheme }) => {
       };
     };
 
-    let cleanupListeners: (() => void) | undefined;
+    let cleanupListeners;
 
     if (window.THREE) {
       cleanupListeners = initThree();
@@ -593,25 +475,18 @@ const ThreeBackgroundScene: React.FC<ThreeSceneProps> = ({ role, bgTheme }) => {
 // ============================================================================
 // 5. INTERACTIVE 3D TILT GLASSMORPHIC CARD COMPONENT
 // ============================================================================
-interface TiltCardProps {
-  children: React.ReactNode;
-  className?: string;
-  glowColor?: 'cyan' | 'emerald' | 'rose' | 'violet';
-  onClick?: () => void;
-}
-
-const TiltCard3D: React.FC<TiltCardProps> = ({
+const TiltCard3D = ({
   children,
   className = '',
   glowColor = 'cyan',
   onClick
 }) => {
-  const cardRef = useRef<HTMLDivElement | null>(null);
+  const cardRef = useRef(null);
   const [transformStyle, setTransformStyle] = useState(
     'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)'
   );
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseMove = (e) => {
     const el = cardRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -656,12 +531,7 @@ const TiltCard3D: React.FC<TiltCardProps> = ({
 // ============================================================================
 // 6. FLOATING 3D BACKGROUND THEME SELECTOR WIDGET
 // ============================================================================
-interface ThemeSelectorProps {
-  currentTheme: BackgroundTheme;
-  onSelectTheme: (t: BackgroundTheme) => void;
-}
-
-const BackgroundThemePicker: React.FC<ThemeSelectorProps> = ({ currentTheme, onSelectTheme }) => {
+const BackgroundThemePicker = ({ currentTheme, onSelectTheme }) => {
   const [open, setOpen] = useState(false);
 
   return (
@@ -722,51 +592,51 @@ const BackgroundThemePicker: React.FC<ThemeSelectorProps> = ({ currentTheme, onS
 // 7. MAIN APPLICATION COMPONENT
 // ============================================================================
 export default function App() {
-  const [fbUser, setFbUser] = useState<FirebaseUser | null>(null);
+  const [fbUser, setFbUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
 
   // 3D Theme State
-  const [bgTheme, setBgTheme] = useState<BackgroundTheme>(() => {
-    const saved = localStorage.getItem('vexalqora_3d_theme') as BackgroundTheme;
+  const [bgTheme, setBgTheme] = useState(() => {
+    const saved = localStorage.getItem('vexalqora_3d_theme');
     return saved || 'cybernetic';
   });
 
-  const handleSelectTheme = (t: BackgroundTheme) => {
+  const handleSelectTheme = (t) => {
     setBgTheme(t);
     localStorage.setItem('vexalqora_3d_theme', t);
   };
 
   // Routes & Navigation State
-  const [currentRoute, setCurrentRoute] = useState<string>('/');
-  const [publicSection, setPublicSection] = useState<'home' | 'about' | 'services' | 'contact'>('home');
-  const [customerTab, setCustomerTab] = useState<'dashboard' | 'profile' | 'projects' | 'orders' | 'tickets' | 'invoices' | 'settings'>('dashboard');
-  const [adminTab, setAdminTab] = useState<'dashboard' | 'customers' | 'projects' | 'services' | 'orders' | 'inquiries' | 'payments' | 'tickets' | 'reviews' | 'content' | 'analytics' | 'settings'>('dashboard');
+  const [currentRoute, setCurrentRoute] = useState('/');
+  const [publicSection, setPublicSection] = useState('home');
+  const [customerTab, setCustomerTab] = useState('dashboard');
+  const [adminTab, setAdminTab] = useState('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // RBAC State
-  const [role, setRole] = useState<UserRole>('guest');
-  const [activeCustomer, setActiveCustomer] = useState<CustomerProfile | null>(null);
-  const [adminSessionId, setAdminSessionId] = useState<string | null>(null);
+  const [role, setRole] = useState('guest');
+  const [activeCustomer, setActiveCustomer] = useState(null);
+  const [adminSessionId, setAdminSessionId] = useState(null);
 
   // Live Firestore Collections
-  const [customers, setCustomers] = useState<CustomerProfile[]>([]);
-  const [services, setServices] = useState<ServiceItem[]>([]);
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
-  const [orders, setOrders] = useState<OrderRecord[]>([]);
-  const [tickets, setTickets] = useState<TicketRecord[]>([]);
-  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
-  const [inquiries, setInquiries] = useState<ContactInquiry[]>([]);
-  const [reviews, setReviews] = useState<ReviewRecord[]>([]);
-  const [siteContent, setSiteContent] = useState<SiteContentConfig>(DEFAULT_SITE_CONTENT);
+  const [customers, setCustomers] = useState([]);
+  const [services, setServices] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [tickets, setTickets] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [inquiries, setInquiries] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [siteContent, setSiteContent] = useState(DEFAULT_SITE_CONTENT);
 
   // Agreement Modal State
   const [showAgreementModal, setShowAgreementModal] = useState(false);
-  const [agreementPlanSelected, setAgreementPlanSelected] = useState<'website' | 'combo' | null>(null);
+  const [agreementPlanSelected, setAgreementPlanSelected] = useState(null);
 
   // Feedback Banner
-  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'warning'; message: string } | null>(null);
+  const [toast, setToast] = useState(null);
 
-  const notify = (type: 'success' | 'error' | 'warning', message: string) => {
+  const notify = (type, message) => {
     setToast({ type, message });
     setTimeout(() => {
       setToast((prev) => (prev?.message === message ? null : prev));
@@ -777,8 +647,8 @@ export default function App() {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        if (typeof (window as any).__initial_auth_token !== 'undefined' && (window as any).__initial_auth_token) {
-          await signInWithCustomToken(auth, (window as any).__initial_auth_token);
+        if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
+          await signInWithCustomToken(auth, window.__initial_auth_token);
         } else {
           await signInAnonymously(auth);
         }
@@ -801,7 +671,7 @@ export default function App() {
     const unsubCustomers = onSnapshot(
       collection(db, 'artifacts', appId, 'public', 'data', 'customers'),
       (snap) => {
-        setCustomers(snap.docs.map((d) => ({ id: d.id, ...d.data() } as CustomerProfile)));
+        setCustomers(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       }
     );
 
@@ -813,7 +683,7 @@ export default function App() {
             await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'services'), srv);
           }
         } else {
-          setServices(snap.docs.map((d) => ({ id: d.id, ...d.data() } as ServiceItem)));
+          setServices(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
         }
       }
     );
@@ -821,42 +691,42 @@ export default function App() {
     const unsubProjects = onSnapshot(
       collection(db, 'artifacts', appId, 'public', 'data', 'projects'),
       (snap) => {
-        setProjects(snap.docs.map((d) => ({ id: d.id, ...d.data() } as ProjectRecord)));
+        setProjects(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       }
     );
 
     const unsubOrders = onSnapshot(
       collection(db, 'artifacts', appId, 'public', 'data', 'orders'),
       (snap) => {
-        setOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() } as OrderRecord)));
+        setOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       }
     );
 
     const unsubTickets = onSnapshot(
       collection(db, 'artifacts', appId, 'public', 'data', 'tickets'),
       (snap) => {
-        setTickets(snap.docs.map((d) => ({ id: d.id, ...d.data() } as TicketRecord)));
+        setTickets(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       }
     );
 
     const unsubInvoices = onSnapshot(
       collection(db, 'artifacts', appId, 'public', 'data', 'invoices'),
       (snap) => {
-        setInvoices(snap.docs.map((d) => ({ id: d.id, ...d.data() } as InvoiceRecord)));
+        setInvoices(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       }
     );
 
     const unsubInquiries = onSnapshot(
       collection(db, 'artifacts', appId, 'public', 'data', 'inquiries'),
       (snap) => {
-        setInquiries(snap.docs.map((d) => ({ id: d.id, ...d.data() } as ContactInquiry)));
+        setInquiries(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       }
     );
 
     const unsubReviews = onSnapshot(
       collection(db, 'artifacts', appId, 'public', 'data', 'reviews'),
       (snap) => {
-        setReviews(snap.docs.map((d) => ({ id: d.id, ...d.data() } as ReviewRecord)));
+        setReviews(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       }
     );
 
@@ -864,7 +734,7 @@ export default function App() {
       doc(db, 'artifacts', appId, 'public', 'data', 'siteConfig', 'main'),
       async (docSnap) => {
         if (docSnap.exists()) {
-          setSiteContent(docSnap.data() as SiteContentConfig);
+          setSiteContent(docSnap.data());
         } else {
           await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'siteConfig', 'main'), DEFAULT_SITE_CONTENT);
         }
@@ -900,7 +770,7 @@ export default function App() {
   }, [customers]);
 
   // Route Guard & Navigation
-  const navigateTo = (targetPath: string) => {
+  const navigateTo = (targetPath) => {
     setMobileMenuOpen(false);
 
     if (targetPath === '/admin/dashboard') {
@@ -926,18 +796,7 @@ export default function App() {
   // ==========================================================================
   // 8. AUTHENTICATION HANDLERS (CLOUD USERNAME & PASSWORD)
   // ==========================================================================
-  const handleCustomerLogin = async (
-    mode: 'login' | 'register',
-    payload: {
-      identifier?: string;
-      username?: string;
-      password: string;
-      email?: string;
-      name?: string;
-      company?: string;
-      phone?: string;
-    }
-  ) => {
+  const handleCustomerLogin = async (mode, payload) => {
     if (!fbUser) {
       notify('error', 'Cloud database initializing. Please wait a moment.');
       return;
@@ -1013,7 +872,7 @@ export default function App() {
           return;
         }
 
-        const newCustomerData: Omit<CustomerProfile, 'id'> = {
+        const newCustomerData = {
           username: cleanUsername,
           password: cleanPassword,
           name: fullName,
@@ -1029,7 +888,7 @@ export default function App() {
           collection(db, 'artifacts', appId, 'public', 'data', 'customers'),
           newCustomerData
         );
-        const createdCustomer: CustomerProfile = { id: docRef.id, ...newCustomerData };
+        const createdCustomer = { id: docRef.id, ...newCustomerData };
 
         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'projects'), {
           customerId: docRef.id,
@@ -1054,7 +913,7 @@ export default function App() {
   };
 
   // Admin Password Login
-  const handleAdminPasswordLogin = async (passwordInput: string) => {
+  const handleAdminPasswordLogin = async (passwordInput) => {
     if (passwordInput !== 'ANGRAJKARNA1857') {
       notify('error', 'INVALID ADMIN PASSWORD. Access denied.');
       return;
@@ -1333,22 +1192,7 @@ export default function App() {
 // ============================================================================
 // 9. PUBLIC WEBSITE COMPONENT
 // ============================================================================
-interface PublicLayoutProps {
-  publicSection: 'home' | 'about' | 'services' | 'contact';
-  setPublicSection: (s: 'home' | 'about' | 'services' | 'contact') => void;
-  mobileMenuOpen: boolean;
-  setMobileMenuOpen: (v: boolean) => void;
-  role: UserRole;
-  navigateTo: (path: string) => void;
-  handleLogout: () => void;
-  siteContent: SiteContentConfig;
-  services: ServiceItem[];
-  reviews: ReviewRecord[];
-  notify: (type: 'success' | 'error' | 'warning', msg: string) => void;
-  onOpenAgreement: () => void;
-}
-
-const PublicWebsiteLayout: React.FC<PublicLayoutProps> = ({
+const PublicWebsiteLayout = ({
   publicSection,
   setPublicSection,
   mobileMenuOpen,
@@ -1372,7 +1216,7 @@ const PublicWebsiteLayout: React.FC<PublicLayoutProps> = ({
   });
   const [submittingContact, setSubmittingContact] = useState(false);
 
-  const handleContactSubmit = async (e: React.FormEvent) => {
+  const handleContactSubmit = async (e) => {
     e.preventDefault();
     if (!contactForm.name || !contactForm.email || !contactForm.message) {
       notify('error', 'Please fill in your name, email, and inquiry.');
@@ -1419,14 +1263,12 @@ const PublicWebsiteLayout: React.FC<PublicLayoutProps> = ({
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1.5 bg-slate-900/70 p-1.5 rounded-2xl border border-slate-800/80">
-            {(
-              [
-                { id: 'home', label: 'Home' },
-                { id: 'about', label: 'About Us' },
-                { id: 'services', label: 'Services' },
-                { id: 'contact', label: 'Contact' }
-              ] as const
-            ).map((item) => (
+            {[
+              { id: 'home', label: 'Home' },
+              { id: 'about', label: 'About Us' },
+              { id: 'services', label: 'Services' },
+              { id: 'contact', label: 'Contact' }
+            ].map((item) => (
               <button
                 key={item.id}
                 onClick={() => setPublicSection(item.id)}
@@ -1509,7 +1351,7 @@ const PublicWebsiteLayout: React.FC<PublicLayoutProps> = ({
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden bg-slate-950/95 backdrop-blur-2xl border-b border-slate-800 px-4 py-5 space-y-3">
-            {(['home', 'about', 'services', 'contact'] as const).map((sec) => (
+            {['home', 'about', 'services', 'contact'].map((sec) => (
               <button
                 key={sec}
                 onClick={() => {
@@ -1536,13 +1378,19 @@ const PublicWebsiteLayout: React.FC<PublicLayoutProps> = ({
             </button>
             <div className="pt-3 border-t border-slate-800 flex flex-col gap-2">
               <button
-                onClick={() => navigateTo(role === 'customer' ? '/dashboard' : '/login')}
+                onClick={() => {
+                  navigateTo(role === 'customer' ? '/dashboard' : '/login');
+                  setMobileMenuOpen(false);
+                }}
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-600 text-slate-950 font-bold text-sm"
               >
                 {role === 'customer' ? 'Customer Dashboard' : 'Customer Login / Register'}
               </button>
               <button
-                onClick={() => navigateTo(role === 'admin' ? '/admin/dashboard' : '/admin/login')}
+                onClick={() => {
+                  navigateTo(role === 'admin' ? '/admin/dashboard' : '/admin/login');
+                  setMobileMenuOpen(false);
+                }}
                 className="w-full py-3 rounded-xl bg-slate-900 border border-rose-500/30 text-rose-300 font-semibold text-sm"
               >
                 Admin Login
@@ -1964,23 +1812,7 @@ const PublicWebsiteLayout: React.FC<PublicLayoutProps> = ({
 // ============================================================================
 // 10. CUSTOMER AUTHENTICATION VIEW (/login)
 // ============================================================================
-interface CustomerAuthViewProps {
-  onAuthSubmit: (
-    mode: 'login' | 'register',
-    payload: {
-      identifier?: string;
-      username?: string;
-      password: string;
-      email?: string;
-      name?: string;
-      company?: string;
-      phone?: string;
-    }
-  ) => Promise<void>;
-  onBackPublic: () => void;
-}
-
-const CustomerAuthView: React.FC<CustomerAuthViewProps> = ({ onAuthSubmit, onBackPublic }) => {
+const CustomerAuthView = ({ onAuthSubmit, onBackPublic }) => {
   const [isRegister, setIsRegister] = useState(false);
   const [identifier, setIdentifier] = useState('');
   const [username, setUsername] = useState('');
@@ -1992,7 +1824,7 @@ const CustomerAuthView: React.FC<CustomerAuthViewProps> = ({ onAuthSubmit, onBac
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     if (isRegister) {
@@ -2158,21 +1990,7 @@ const CustomerAuthView: React.FC<CustomerAuthViewProps> = ({ onAuthSubmit, onBac
 // ============================================================================
 // 11. ISOLATED CUSTOMER PANEL (/dashboard) WITH ORDER FORM, REVIEWS & WHATSAPP
 // ============================================================================
-interface CustomerPortalProps {
-  customer: CustomerProfile;
-  customerTab: 'dashboard' | 'profile' | 'projects' | 'orders' | 'tickets' | 'invoices' | 'settings';
-  setCustomerTab: (t: any) => void;
-  onBackPublic: () => void;
-  onLogout: () => void;
-  projects: ProjectRecord[];
-  orders: OrderRecord[];
-  tickets: TicketRecord[];
-  invoices: InvoiceRecord[];
-  services: ServiceItem[];
-  notify: (type: 'success' | 'error' | 'warning', msg: string) => void;
-}
-
-const CustomerPortalLayout: React.FC<CustomerPortalProps> = ({
+const CustomerPortalLayout = ({
   customer,
   customerTab,
   setCustomerTab,
@@ -2192,20 +2010,20 @@ const CustomerPortalLayout: React.FC<CustomerPortalProps> = ({
   });
 
   // Detailed Order Form State with Automatic Pricing Box
-  const [orderModalService, setOrderModalService] = useState<ServiceItem | null>(null);
-  const [planType, setPlanType] = useState<'website' | 'combo'>('website');
+  const [orderModalService, setOrderModalService] = useState(null);
+  const [planType, setPlanType] = useState('website');
   const [reqDetails, setReqDetails] = useState('');
   const [businessName, setBusinessName] = useState('');
 
   // Support Ticket Form State
   const [newTicketSubject, setNewTicketSubject] = useState('');
   const [newTicketMessage, setNewTicketMessage] = useState('');
-  const [newTicketPriority, setNewTicketPriority] = useState<'Low' | 'Medium' | 'High' | 'Critical'>('Medium');
+  const [newTicketPriority, setNewTicketPriority] = useState('Medium');
 
   // Review & Rating State
-  const [reviewModalOrder, setReviewModalOrder] = useState<OrderRecord | null>(null);
-  const [ratingVal, setRatingVal] = useState<number>(5);
-  const [reviewTextOpt, setReviewTextOpt] = useState<'Bad' | 'Good' | 'Very Good' | 'Excellent'>('Excellent');
+  const [reviewModalOrder, setReviewModalOrder] = useState(null);
+  const [ratingVal, setRatingVal] = useState(5);
+  const [reviewTextOpt, setReviewTextOpt] = useState('Excellent');
   const [reviewComment, setReviewComment] = useState('');
   const [showWhatsAppButton, setShowWhatsAppButton] = useState(false);
 
@@ -2213,7 +2031,7 @@ const CustomerPortalLayout: React.FC<CustomerPortalProps> = ({
     setProfileForm({ name: customer.name, company: customer.company, phone: customer.phone });
   }, [customer]);
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
     try {
       await updateDoc(
@@ -2227,7 +2045,7 @@ const CustomerPortalLayout: React.FC<CustomerPortalProps> = ({
     }
   };
 
-  const handleConfirmOrder = async (e: React.FormEvent) => {
+  const handleConfirmOrder = async (e) => {
     e.preventDefault();
     if (!orderModalService) return;
     const price = planType === 'website' ? 850 : 1100;
@@ -2269,7 +2087,7 @@ const CustomerPortalLayout: React.FC<CustomerPortalProps> = ({
     }
   };
 
-  const handleCreateTicket = async (e: React.FormEvent) => {
+  const handleCreateTicket = async (e) => {
     e.preventDefault();
     if (!newTicketSubject || !newTicketMessage) {
       notify('error', 'Please enter a ticket subject and message.');
@@ -2294,7 +2112,7 @@ const CustomerPortalLayout: React.FC<CustomerPortalProps> = ({
     }
   };
 
-  const handleSubmitReview = async (e: React.FormEvent) => {
+  const handleSubmitReview = async (e) => {
     e.preventDefault();
     if (!reviewModalOrder) return;
 
@@ -2326,7 +2144,7 @@ const CustomerPortalLayout: React.FC<CustomerPortalProps> = ({
     { id: 'tickets', label: 'Support Tickets', icon: MessageSquare },
     { id: 'invoices', label: 'Invoices', icon: FileText },
     { id: 'settings', label: 'Settings', icon: Settings }
-  ] as const;
+  ];
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row relative">
@@ -2463,7 +2281,7 @@ const CustomerPortalLayout: React.FC<CustomerPortalProps> = ({
                 <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Review Feedback *</label>
                 <select
                   value={reviewTextOpt}
-                  onChange={(e) => setReviewTextOpt(e.target.value as any)}
+                  onChange={(e) => setReviewTextOpt(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm font-bold"
                 >
                   <option value="Bad">Bad</option>
@@ -2817,7 +2635,7 @@ const CustomerPortalLayout: React.FC<CustomerPortalProps> = ({
                   />
                   <select
                     value={newTicketPriority}
-                    onChange={(e) => setNewTicketPriority(e.target.value as any)}
+                    onChange={(e) => setNewTicketPriority(e.target.value)}
                     className="px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm"
                   >
                     <option value="Low">Priority: Low</option>
@@ -2897,17 +2715,12 @@ const CustomerPortalLayout: React.FC<CustomerPortalProps> = ({
 // ============================================================================
 // 12. ADMIN LOGIN VIEW (/admin/login)
 // ============================================================================
-interface AdminLoginViewProps {
-  onAdminSubmit: (password: string) => Promise<void>;
-  onBackPublic: () => void;
-}
-
-const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onAdminSubmit, onBackPublic }) => {
+const AdminLoginView = ({ onAdminSubmit, onBackPublic }) => {
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     await onAdminSubmit(password);
@@ -2976,23 +2789,7 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onAdminSubmit, onBackPu
 // ============================================================================
 // 13. PRIVATE ADMIN COMMAND CENTER (/admin/dashboard)
 // ============================================================================
-interface AdminPortalProps {
-  adminTab: 'dashboard' | 'customers' | 'projects' | 'services' | 'orders' | 'inquiries' | 'payments' | 'tickets' | 'reviews' | 'content' | 'analytics' | 'settings';
-  setAdminTab: (t: any) => void;
-  onLogout: () => void;
-  customers: CustomerProfile[];
-  projects: ProjectRecord[];
-  services: ServiceItem[];
-  orders: OrderRecord[];
-  tickets: TicketRecord[];
-  invoices: InvoiceRecord[];
-  inquiries: ContactInquiry[];
-  reviews: ReviewRecord[];
-  siteContent: SiteContentConfig;
-  notify: (type: 'success' | 'error' | 'warning', msg: string) => void;
-}
-
-const AdminPortalLayout: React.FC<AdminPortalProps> = ({
+const AdminPortalLayout = ({
   adminTab,
   setAdminTab,
   onLogout,
@@ -3011,14 +2808,14 @@ const AdminPortalLayout: React.FC<AdminPortalProps> = ({
     customerId: '',
     title: '',
     serviceType: 'Website Development',
-    status: 'In Development' as ProjectRecord['status'],
+    status: 'In Development',
     progress: 50,
     deadline: new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0],
     launchedUrl: '',
     launchedFileCode: ''
   });
 
-  const [contentForm, setContentForm] = useState<SiteContentConfig>(siteContent);
+  const [contentForm, setContentForm] = useState(siteContent);
   useEffect(() => {
     setContentForm(siteContent);
   }, [siteContent]);
@@ -3034,9 +2831,9 @@ const AdminPortalLayout: React.FC<AdminPortalProps> = ({
     { id: 'reviews', label: `Manage Reviews (${reviews.length})`, icon: Sparkles },
     { id: 'tickets', label: `Tickets (${tickets.length})`, icon: MessageSquare },
     { id: 'content', label: 'Website Content', icon: Globe }
-  ] as const;
+  ];
 
-  const handleAssignProject = async (e: React.FormEvent) => {
+  const handleAssignProject = async (e) => {
     e.preventDefault();
     const cust = customers.find((c) => c.id === newProject.customerId);
     if (!cust || !newProject.title) return;
@@ -3057,7 +2854,7 @@ const AdminPortalLayout: React.FC<AdminPortalProps> = ({
     notify('success', 'Project created & synchronized to customer panel.');
   };
 
-  const handleSaveContent = async (e: React.FormEvent) => {
+  const handleSaveContent = async (e) => {
     e.preventDefault();
     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'siteConfig', 'main'), contentForm);
     notify('success', 'Website content updated live.');
@@ -3224,7 +3021,7 @@ const AdminPortalLayout: React.FC<AdminPortalProps> = ({
                   />
                   <select
                     value={newProject.status}
-                    onChange={(e) => setNewProject({ ...newProject, status: e.target.value as any })}
+                    onChange={(e) => setNewProject({ ...newProject, status: e.target.value })}
                     className="px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm"
                   >
                     <option value="In Development">In Development</option>
@@ -3425,14 +3222,14 @@ const AdminPortalLayout: React.FC<AdminPortalProps> = ({
                     placeholder="Type admin reply..."
                     onKeyDown={async (e) => {
                       if (e.key === 'Enter') {
-                        const val = (e.target as HTMLInputElement).value;
+                        const val = e.target.value;
                         if (!val) return;
                         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tickets', t.id), {
                           adminReply: val,
                           status: 'Resolved'
                         });
                         notify('success', 'Admin reply sent to customer.');
-                        (e.target as HTMLInputElement).value = '';
+                        e.target.value = '';
                       }
                     }}
                     className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs"
