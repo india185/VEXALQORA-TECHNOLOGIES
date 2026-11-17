@@ -1,571 +1,259 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  Shield,
-  ShieldAlert,
-  ShieldCheck,
-  Users,
-  Briefcase,
-  ShoppingBag,
-  MessageSquare,
-  CreditCard,
-  Settings,
-  BarChart3,
-  Globe,
-  LogOut,
-  Plus,
-  Trash2,
-  CheckCircle2,
-  AlertTriangle,
-  Lock,
-  Eye,
-  EyeOff,
-  Menu,
-  X,
-  FileText,
-  Star,
-  Send,
-  Check
-} from 'lucide-react';
+import React, { useState } from 'react';
 
 export default function App() {
+  const [isAdmin, setIsAdmin] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
-  const [adminMode, setAdminMode] = useState(false);
-  const [selectedTheme, setSelectedTheme] = useState('Cybernetic Core');
-  
-  // State data synced across panels
+  const [theme, setTheme] = useState('Cybernetic Core');
   const [orders, setOrders] = useState([
-    { id: 'ORD-9481', service: 'Website + Meta Ads / Promotion (₹700 + ₹400)', amount: '₹1,100', status: 'Pending', client: 'Apex Enterprise', date: '2026-11-16' }
+    { id: 1, service: 'Only Website', price: 850, status: 'Unpaid', customer: 'Rahul Sharma', phone: '+91 9839000000' }
   ]);
-  
-  const [invoices, setInvoices] = useState([
-    { id: 'INV-338481', item: 'Website + Meta Ads / Promotion (₹700 + ₹400) • ₹1,100', amount: '₹1,100', status: 'Unpaid', date: '2026-11-16' }
-  ]);
+  const [tickets, setTickets] = useState([]);
+  const [newTicket, setNewTicket] = useState('');
 
-  const [tickets, setTickets] = useState([
-    { id: 'TCK-101', subject: 'Domain integration assistance', message: 'Need help connecting custom domain to Vercel.', status: 'Open', date: '2026-11-16' }
-  ]);
-
-  const [newTicketSubject, setNewTicketSubject] = useState('');
-  const [newTicketMsg, setNewTicketMsg] = useState('');
-  
-  const [reviews, setReviews] = useState([
-    { id: 1, user: 'Gopal Singh', rating: 5, comment: 'Amazing 3D web platform delivered on time with 2 years support!', date: '2026-11-16' }
-  ]);
-  const [newRating, setNewRating] = useState(5);
-  const [newReviewComment, setNewReviewComment] = useState('');
-
-  // Order modal state
-  const [showOrderModal, setShowOrderModal] = useState(false);
-  const [selectedServiceType, setSelectedServiceType] = useState('Website + Meta Ads / Promotion');
-  const [selectedPrice, setSelectedPrice] = useState('₹1,100');
-  const [businessNameInput, setBusinessNameInput] = useState('Apex Enterprise');
-  const [requirementsInput, setRequirementsInput] = useState('');
-
-  const handleCreateOrder = (type, price) => {
-    setSelectedServiceType(type);
-    setSelectedPrice(price);
-    setShowOrderModal(true);
+  const handleOrder = (service, price) => {
+    const newOrd = { id: orders.length + 1, service, price, status: 'Unpaid', customer: 'Sher Singh', phone: '+91 9839000000' };
+    setOrders([...orders, newOrd]);
+    alert(`Order Confirmed for ${service} (₹${price})! Our team will contact you within 24 hours.`);
   };
 
-  const submitOrderConfirmation = () => {
-    const newOrd = {
-      id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
-      service: `${selectedServiceType} (${selectedPrice})`,
-      amount: selectedPrice,
-      status: 'Pending',
-      client: businessNameInput || 'Client',
-      date: new Date().toISOString().split('T')[0]
-    };
-    const newInv = {
-      id: 'INV-' + Math.floor(100000 + Math.random() * 900000),
-      item: `${selectedServiceType} • ${selectedPrice}`,
-      amount: selectedPrice,
-      status: 'Unpaid',
-      date: new Date().toISOString().split('T')[0]
-    };
-    setOrders([newOrd, ...orders]);
-    setInvoices([newInv, ...invoices]);
-    setShowOrderModal(false);
-    alert('Order Confirmed Successfully! Invoice generated.');
+  const togglePayment = (id) => {
+    setOrders(orders.map(o => o.id === id ? { ...o, status: o.status === 'Paid' ? 'Unpaid' : 'Paid' } : o));
   };
 
-  const handleAddTicket = (e) => {
+  const submitTicket = (e) => {
     e.preventDefault();
-    if (!newTicketSubject || !newTicketMsg) return;
-    const tck = {
-      id: 'TCK-' + Math.floor(100 + Math.random() * 900),
-      subject: newTicketSubject,
-      message: newTicketMsg,
-      status: 'Open',
-      date: new Date().toISOString().split('T')[0]
-    };
-    setTickets([tck, ...tickets]);
-    setNewTicketSubject('');
-    setNewTicketMsg('');
-    alert('Support Ticket Submitted!');
-  };
-
-  const handleAddReview = (e) => {
-    e.preventDefault();
-    if (!newReviewComment) return;
-    const rev = {
-      id: reviews.length + 1,
-      user: businessNameInput || 'Verified Client',
-      rating: newRating,
-      comment: newReviewComment,
-      date: new Date().toISOString().split('T')[0]
-    };
-    setReviews([rev, ...reviews]);
-    setNewReviewComment('');
-    alert('Thank you for your feedback! Review posted.');
+    if (!newTicket.trim()) return;
+    setTickets([...tickets, { id: tickets.length + 1, message: newTicket, status: 'Open' }]);
+    setNewTicket('');
+    alert('Support ticket submitted successfully!');
   };
 
   return (
-    <div className="min-h-screen bg-[#07090e] text-slate-100 font-sans flex flex-col selection:bg-cyan-500 selection:text-black">
-      {/* Top Navbar */}
-      <header className="h-16 border-b border-slate-800/80 bg-[#0b0f17]/90 backdrop-blur px-6 flex items-center justify-between z-40 sticky top-0">
-        <div className="flex items-center space-x-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-            <Globe className="w-5 h-5 text-black" />
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500 selection:text-black">
+      {/* Top Header */}
+      <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center font-black text-xl shadow-lg shadow-cyan-500/20">V</div>
+            <div>
+              <h1 className="font-bold text-lg tracking-wider bg-gradient-to-r from-cyan-400 to-indigo-400 bg-clip-text text-transparent">VEXALQORA TECHNOLOGIES</h1>
+              <p className="text-xs text-slate-400">3D Enterprise Platform & Cloud Solutions</p>
+            </div>
           </div>
-          <div>
-            <span className="font-bold tracking-wider text-sm bg-gradient-to-r from-cyan-400 to-indigo-400 bg-clip-text text-transparent">
-              {adminMode ? 'ADMIN COMMAND' : 'VEXALQORA TECHNOLOGIES 3D Enterprise Platform'}
-            </span>
-            <span className="block text-[10px] text-slate-400 tracking-widest uppercase">
-              {adminMode ? 'VEXALQORA ROOT' : 'VEXALQORA CLOUD'}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => setAdminMode(!adminMode)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${
-              adminMode 
-                ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 hover:bg-rose-500/20' 
-                : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20'
-            }`}
+          <button 
+            onClick={() => setIsAdmin(!isAdmin)}
+            className="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 transition shadow"
           >
-            {adminMode ? '🔒 Lock Admin Session' : '⚡ Switch to Admin'}
+            {isAdmin ? 'Switch to Client View' : 'Switch to Admin Portal'}
           </button>
         </div>
       </header>
 
-      {/* Main Workspace */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <aside className="w-64 border-r border-slate-800/80 bg-[#080c14] p-4 flex flex-col justify-between z-30">
-          <div className="space-y-6">
-            <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 font-bold">
-                AS
-              </div>
-              <div className="overflow-hidden">
-                <p className="text-sm font-semibold truncate">Sher Singh</p>
-                <p className="text-xs text-cyan-400 truncate">ananymart85@gmail.com</p>
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {!isAdmin ? (
+          <div>
+            {/* Hero Section */}
+            <div className="relative rounded-3xl p-8 md:p-12 mb-10 overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 shadow-2xl">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+              <div className="relative z-10 max-w-2xl">
+                <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 mb-4">Next-Gen Digital Engineering</span>
+                <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-4">Transform Your Business with Immersive 3D Solutions</h2>
+                <p className="text-slate-400 mb-6">High-converting business websites, custom web applications, and automated growth campaigns delivered with rapid execution.</p>
+                
+                {/* Theme Selector */}
+                <div className="flex items-center space-x-3 bg-slate-900/80 p-3 rounded-xl border border-slate-800 w-fit">
+                  <span className="text-xs text-slate-400 font-medium">3D Theme Active:</span>
+                  <select 
+                    value={theme} 
+                    onChange={(e) => setTheme(e.target.value)}
+                    className="bg-slate-800 text-cyan-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 outline-none cursor-pointer"
+                  >
+                    <option>Cybernetic Core</option>
+                    <option>Quantum Grid</option>
+                    <option>Neural Matrix</option>
+                  </select>
+                </div>
               </div>
             </div>
 
-            <nav className="space-y-1">
-              {!adminMode ? (
-                <>
-                  <button onClick={() => setActiveTab('overview')} className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'overview' ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/20' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'}`}>
-                    <BarChart3 className="w-4 h-4" />
-                    <span>Overview & Services</span>
-                  </button>
-                  <button onClick={() => setActiveTab('orders')} className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'orders' ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/20' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'}`}>
-                    <ShoppingBag className="w-4 h-4" />
-                    <span>My Orders</span>
-                  </button>
-                  <button onClick={() => setActiveTab('invoices')} className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'invoices' ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/20' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'}`}>
-                    <CreditCard className="w-4 h-4" />
-                    <span>Invoices & Payments</span>
-                  </button>
-                  <button onClick={() => setActiveTab('tickets')} className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'tickets' ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/20' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'}`}>
-                    <MessageSquare className="w-4 h-4" />
-                    <span>Support Tickets</span>
-                  </button>
-                  <button onClick={() => setActiveTab('reviews')} className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'reviews' ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/20' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'}`}>
-                    <Star className="w-4 h-4" />
-                    <span>Customer Reviews</span>
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button onClick={() => setActiveTab('admin-overview')} className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'admin-overview' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'}`}>
-                    <BarChart3 className="w-4 h-4" />
-                    <span>Admin Overview</span>
-                  </button>
-                  <button onClick={() => setActiveTab('admin-orders')} className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'admin-orders' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'}`}>
-                    <ShoppingBag className="w-4 h-4" />
-                    <span>Manage Orders ({orders.length})</span>
-                  </button>
-                  <button onClick={() => setActiveTab('admin-invoices')} className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'admin-invoices' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'}`}>
-                    <CreditCard className="w-4 h-4" />
-                    <span>Manage Payments ({invoices.length})</span>
-                  </button>
-                  <button onClick={() => setActiveTab('admin-tickets')} className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${activeTab === 'admin-tickets' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'}`}>
-                    <MessageSquare className="w-4 h-4" />
-                    <span>Support Tickets ({tickets.length})</span>
-                  </button>
-                </>
-              )}
-            </nav>
-          </div>
-
-          <div className="space-y-3">
-            <div className="p-3 rounded-xl bg-slate-900/40 border border-slate-800/80">
-              <span className="text-[11px] text-cyan-400 font-semibold block mb-1">3D Theme Active</span>
-              <select 
-                value={selectedTheme} 
-                onChange={(e) => setSelectedTheme(e.target.value)}
-                className="w-full bg-black/60 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-cyan-500"
-              >
-                <option>Cybernetic Core</option>
-                <option>Quantum Helix</option>
-                <option>Neural Grid</option>
-              </select>
+            {/* Navigation Tabs */}
+            <div className="flex flex-wrap gap-2 mb-8 border-b border-slate-800 pb-4">
+              {[
+                { id: 'overview', label: 'Overview & Pricing' },
+                { id: 'orders', label: 'My Orders' },
+                { id: 'invoices', label: 'Invoices & Payments' },
+                { id: 'tickets', label: 'Support Tickets' },
+                { id: 'reviews', label: 'Customer Reviews' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
+                    activeTab === tab.id 
+                      ? 'bg-cyan-500 text-black font-bold shadow-lg shadow-cyan-500/20' 
+                      : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
-          </div>
-        </aside>
 
-        {/* Content Area */}
-        <main className="flex-1 bg-[#05070b] p-8 overflow-y-auto">
-          {!adminMode ? (
-            <div className="max-w-5xl mx-auto space-y-8">
-              {activeTab === 'overview' && (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Option 1: Only Website */}
-                    <div className="bg-[#0b0f17] border border-slate-800 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between hover:border-cyan-500/50 transition">
-                      <div className="absolute -right-10 -top-10 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl"></div>
-                      <div>
-                        <span className="text-xs uppercase tracking-wider text-cyan-400 font-bold">Option 1</span>
-                        <h3 className="text-xl font-bold mt-1 text-white">Only Website</h3>
-                        <p className="text-3xl font-extrabold text-cyan-400 mt-2">₹850</p>
-                        <p className="text-sm text-slate-400 mt-3">Modern business website with 1–2 days rapid delivery, 3D animations, and responsive layout.</p>
-                      </div>
-                      <button 
-                        onClick={() => handleCreateOrder('Only Website', '₹850')}
-                        className="mt-6 w-full py-3 bg-cyan-500 text-black font-bold rounded-xl hover:bg-cyan-400 transition shadow-lg shadow-cyan-500/20"
-                      >
-                        Confirm Order (₹850)
-                      </button>
-                    </div>
-
-                    {/* Option 2: Website + Meta Ads */}
-                    <div className="bg-[#0b0f17] border border-cyan-500/40 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between shadow-xl shadow-cyan-500/5">
-                      <div className="absolute -right-10 -top-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl"></div>
-                      <div>
-                        <span className="text-xs uppercase tracking-wider text-indigo-400 font-bold">Option 2 (Combo)</span>
-                        <h3 className="text-xl font-bold mt-1 text-white">Website + Meta Ads / Promotion</h3>
-                        <p className="text-3xl font-extrabold text-indigo-400 mt-2">₹700 + ₹400 <span className="text-sm text-slate-400 font-normal">(Total ₹1,100)</span></p>
-                        <p className="text-sm text-slate-400 mt-3">Complete business website combined with Meta Ads campaign management & promotion.</p>
-                      </div>
-                      <button 
-                        onClick={() => handleCreateOrder('Website + Meta Ads / Promotion', '₹700 + ₹400')}
-                        className="mt-6 w-full py-3 bg-gradient-to-r from-cyan-500 to-indigo-600 text-black font-bold rounded-xl hover:opacity-90 transition shadow-lg shadow-cyan-500/20"
-                      >
-                        Confirm Order (₹1,100)
-                      </button>
-                    </div>
+            {/* Tab Contents */}
+            {activeTab === 'overview' && (
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between hover:border-cyan-500/50 transition">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">Option 1</span>
+                    <h3 className="text-2xl font-bold mt-1 mb-2">Only Website</h3>
+                    <div className="text-3xl font-black text-white mb-4">₹850</div>
+                    <p className="text-slate-400 text-sm mb-6">Modern business website with 1–2 days rapid delivery, 3D animations, and responsive layout.</p>
                   </div>
-                </>
-              )}
+                  <button 
+                    onClick={() => handleOrder('Only Website', 850)}
+                    className="w-full py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold transition shadow-lg shadow-cyan-500/20"
+                  >
+                    Confirm Order (₹850)
+                  </button>
+                </div>
 
-              {activeTab === 'orders' && (
-                <div className="space-y-6">
-                  <h2 className="text-xl font-bold">My Commissioned Orders</h2>
-                  <div className="space-y-3">
-                    {orders.map((ord, idx) => (
-                      <div key={idx} className="p-4 bg-[#0b0f17] border border-slate-800 rounded-xl flex items-center justify-between">
+                <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between hover:border-indigo-500/50 transition">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">Option 2 (Combo)</span>
+                    <h3 className="text-2xl font-bold mt-1 mb-2">Website + Meta Ads / Promotion</h3>
+                    <div className="text-3xl font-black text-white mb-4">₹700 + ₹400 <span className="text-sm font-normal text-slate-400">(Total ₹1,100)</span></div>
+                    <p className="text-slate-400 text-sm mb-6">Complete business website combined with Meta Ads campaign management & promotion.</p>
+                  </div>
+                  <button 
+                    onClick={() => handleOrder('Website + Meta Ads / Promotion', 1100)}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 hover:opacity-90 text-white font-bold transition shadow-lg shadow-indigo-500/20"
+                  >
+                    Confirm Order (₹1,100)
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'orders' && (
+              <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
+                <h3 className="text-xl font-bold mb-4">Active & Past Orders</h3>
+                {orders.length === 0 ? (
+                  <p className="text-slate-400 text-sm">No orders placed yet.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {orders.map(o => (
+                      <div key={o.id} className="flex justify-between items-center p-4 bg-slate-950 rounded-xl border border-slate-800">
                         <div>
-                          <p className="font-bold text-white">{ord.service}</p>
-                          <p className="text-xs text-slate-400">Order ID: {ord.id} • Date: {ord.date}</p>
+                          <h4 className="font-bold text-white">{o.service}</h4>
+                          <p className="text-xs text-slate-400">Price: ₹{o.price}</p>
                         </div>
-                        <span className="px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-full text-xs font-semibold">
-                          {ord.status}
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${o.status === 'Paid' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
+                          {o.status}
                         </span>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+            )}
 
-              {activeTab === 'invoices' && (
-                <div className="space-y-6">
-                  <h2 className="text-xl font-bold">Invoices & Payment Records</h2>
-                  <div className="space-y-3">
-                    {invoices.map((inv, idx) => (
-                      <div key={idx} className="p-4 bg-[#0b0f17] border border-slate-800 rounded-xl flex items-center justify-between">
-                        <div>
-                          <p className="font-bold text-white">{inv.id}</p>
-                          <p className="text-xs text-slate-400">{inv.item}</p>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${
-                          inv.status === 'Paid' 
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
-                            : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                        }`}>
-                          {inv.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'tickets' && (
-                <div className="space-y-6">
-                  <h2 className="text-xl font-bold">Support Tickets & Complaints</h2>
-                  <form onSubmit={handleAddTicket} className="p-6 bg-[#0b0f17] border border-slate-800 rounded-2xl space-y-4">
-                    <h3 className="text-sm font-semibold text-cyan-400">Create New Support Ticket</h3>
-                    <input 
-                      type="text" 
-                      placeholder="Subject / Issue Title" 
-                      value={newTicketSubject}
-                      onChange={(e) => setNewTicketSubject(e.target.value)}
-                      className="w-full bg-black/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
-                    />
+            {activeTab === 'tickets' && (
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
+                  <h3 className="text-xl font-bold mb-4">Create Support Ticket</h3>
+                  <form onSubmit={submitTicket} className="space-y-4">
                     <textarea 
-                      rows="3"
-                      placeholder="Describe your issue or complaint in detail..." 
-                      value={newTicketMsg}
-                      onChange={(e) => setNewTicketMsg(e.target.value)}
-                      className="w-full bg-black/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
+                      value={newTicket}
+                      onChange={(e) => setNewTicket(e.target.value)}
+                      placeholder="Describe your query or request..."
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:border-cyan-500 outline-none h-32 resize-none"
                     ></textarea>
-                    <button type="submit" className="px-6 py-2.5 bg-cyan-500 text-black font-bold rounded-xl text-sm hover:bg-cyan-400 transition">
-                      Submit Ticket
-                    </button>
+                    <button type="submit" className="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm rounded-xl transition">Submit Ticket</button>
                   </form>
-
-                  <div className="space-y-3">
-                    {tickets.map((tck, idx) => (
-                      <div key={idx} className="p-4 bg-[#0b0f17] border border-slate-800 rounded-xl space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-bold text-white">{tck.subject} ({tck.id})</span>
-                          <span className="px-2.5 py-0.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded-full text-xs">{tck.status}</span>
-                        </div>
-                        <p className="text-xs text-slate-300">{tck.message}</p>
-                      </div>
-                    ))}
-                  </div>
                 </div>
-              )}
-
-              {activeTab === 'reviews' && (
-                <div className="space-y-6">
-                  <h2 className="text-xl font-bold">Customer Reviews & Testimonials</h2>
-                  <form onSubmit={handleAddReview} className="p-6 bg-[#0b0f17] border border-slate-800 rounded-2xl space-y-4">
-                    <h3 className="text-sm font-semibold text-cyan-400">Leave a Review</h3>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs text-slate-400">Rating:</span>
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button 
-                          type="button" 
-                          key={star} 
-                          onClick={() => setNewRating(star)}
-                          className={`text-lg ${star <= newRating ? 'text-amber-400' : 'text-slate-600'}`}
-                        >
-                          ★
-                        </button>
+                <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
+                  <h3 className="text-xl font-bold mb-4">Your Tickets</h3>
+                  {tickets.length === 0 ? (
+                    <p className="text-slate-400 text-sm">No support tickets found.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {tickets.map(t => (
+                        <div key={t.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex justify-between items-center">
+                          <p className="text-sm text-slate-200">{t.message}</p>
+                          <span className="px-2.5 py-1 bg-cyan-500/10 text-cyan-400 text-xs rounded-full border border-cyan-500/20">{t.status}</span>
+                        </div>
                       ))}
                     </div>
-                    <textarea 
-                      rows="3"
-                      placeholder="Share your experience with Vexalqora Technologies..." 
-                      value={newReviewComment}
-                      onChange={(e) => setNewReviewComment(e.target.value)}
-                      className="w-full bg-black/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
-                    ></textarea>
-                    <button type="submit" className="px-6 py-2.5 bg-cyan-500 text-black font-bold rounded-xl text-sm hover:bg-cyan-400 transition">
-                      Post Review
-                    </button>
-                  </form>
-
-                  <div className="space-y-3">
-                    {reviews.map((rev) => (
-                      <div key={rev.id} className="p-4 bg-[#0b0f17] border border-slate-800 rounded-xl space-y-1">
-                        <div className="flex justify-between items-center">
-                          <span className="font-bold text-white">{rev.user}</span>
-                          <span className="text-amber-400">{'★'.repeat(rev.rating)}</span>
-                        </div>
-                        <p className="text-xs text-slate-300">{rev.comment}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="max-w-5xl mx-auto space-y-8">
-              {activeTab === 'admin-overview' && (
-                <div className="space-y-6">
-                  <h2 className="text-xl font-bold text-rose-400">Admin Control Command Center</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="p-6 bg-[#0b0f17] border border-slate-800 rounded-2xl">
-                      <p className="text-xs text-slate-400">Total Orders</p>
-                      <p className="text-3xl font-extrabold text-white mt-1">{orders.length}</p>
-                    </div>
-                    <div className="p-6 bg-[#0b0f17] border border-slate-800 rounded-2xl">
-                      <p className="text-xs text-slate-400">Total Invoices</p>
-                      <p className="text-3xl font-extrabold text-white mt-1">{invoices.length}</p>
-                    </div>
-                    <div className="p-6 bg-[#0b0f17] border border-slate-800 rounded-2xl">
-                      <p className="text-xs text-slate-400">Support Tickets</p>
-                      <p className="text-3xl font-extrabold text-white mt-1">{tickets.length}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'admin-orders' && (
-                <div className="space-y-6">
-                  <h2 className="text-xl font-bold text-rose-400">Manage Customer Orders</h2>
-                  <div className="space-y-3">
-                    {orders.map((ord, idx) => (
-                      <div key={idx} className="p-4 bg-[#0b0f17] border border-slate-800 rounded-xl flex items-center justify-between">
-                        <div>
-                          <p className="font-bold text-white">{ord.client} - {ord.service}</p>
-                          <p className="text-xs text-slate-400">ID: {ord.id} • {ord.date}</p>
-                        </div>
-                        <span className="px-3 py-1 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded-full text-xs font-semibold">
-                          {ord.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'admin-invoices' && (
-                <div className="space-y-6">
-                  <h2 className="text-xl font-bold text-rose-400">Manage Payments & Invoices</h2>
-                  <div className="space-y-3">
-                    {invoices.map((inv, idx) => (
-                      <div key={idx} className="p-4 bg-[#0b0f17] border border-slate-800 rounded-xl flex items-center justify-between">
-                        <div>
-                          <p className="font-bold text-white">{inv.id}</p>
-                          <p className="text-xs text-slate-400">{inv.item}</p>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <select 
-                            value={inv.status}
-                            onChange={(e) => {
-                              const updated = [...invoices];
-                              updated[idx].status = e.target.value;
-                              setInvoices(updated);
-                            }}
-                            className={`px-3 py-1 rounded-lg text-xs font-semibold border bg-black/60 ${
-                              inv.status === 'Paid' 
-                                ? 'text-emerald-400 border-emerald-500/40' 
-                                : 'text-rose-400 border-rose-500/40'
-                            }`}
-                          >
-                            <option value="Unpaid">Unpaid</option>
-                            <option value="Paid">Paid</option>
-                          </select>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'admin-tickets' && (
-                <div className="space-y-6">
-                  <h2 className="text-xl font-bold text-rose-400">Manage Support Tickets</h2>
-                  <div className="space-y-3">
-                    {tickets.map((tck, idx) => (
-                      <div key={idx} className="p-4 bg-[#0b0f17] border border-slate-800 rounded-xl space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-bold text-white">{tck.subject} ({tck.id})</span>
-                          <button 
-                            onClick={() => {
-                              const updated = [...tickets];
-                              updated[idx].status = updated[idx].status === 'Open' ? 'Resolved' : 'Open';
-                              setTickets(updated);
-                            }}
-                            className="px-3 py-1 bg-rose-500/10 text-rose-400 border border-rose-500/30 rounded-full text-xs"
-                          >
-                            Status: {tck.status} (Click to toggle)
-                          </button>
-                        </div>
-                        <p className="text-xs text-slate-300">{tck.message}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </main>
-      </div>
-
-      {/* Order Modal */}
-      {showOrderModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0b0f17] border border-cyan-500/40 rounded-2xl w-full max-w-lg p-6 space-y-6 relative shadow-2xl">
-            <button 
-              onClick={() => setShowOrderModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white"
-            >
-              ✕
-            </button>
-            <div>
-              <h3 className="text-lg font-bold text-white">Order: {selectedServiceType}</h3>
-              <p className="text-xs text-cyan-400 mt-1">1–2 Days Rapid Delivery • 2 Years Support Guarantee</p>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs text-slate-400 block mb-1">BUSINESS NAME *</label>
-                <input 
-                  type="text" 
-                  value={businessNameInput}
-                  onChange={(e) => setBusinessNameInput(e.target.value)}
-                  className="w-full bg-black/60 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-slate-400 block mb-1">PACKAGE & PRICING</label>
-                <div className="p-3 bg-black/60 border border-cyan-500/40 rounded-xl flex justify-between items-center">
-                  <span className="text-sm font-bold text-white">{selectedServiceType}</span>
-                  <span className="text-sm font-extrabold text-cyan-400">{selectedPrice}</span>
+                  )}
                 </div>
               </div>
+            )}
 
-              <div>
-                <label className="text-xs text-slate-400 block mb-1">DETAILED REQUIREMENTS / SPECIFICATIONS *</label>
-                <textarea 
-                  rows="3"
-                  placeholder="Describe your design preferences, target audience, color schemes..."
-                  value={requirementsInput}
-                  onChange={(e) => setRequirementsInput(e.target.value)}
-                  className="w-full bg-black/60 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-                ></textarea>
+            {activeTab === 'invoices' && (
+              <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
+                <h3 className="text-xl font-bold mb-4">Invoices & Payment History</h3>
+                <p className="text-slate-400 text-sm">All invoices are generated dynamically upon order confirmation.</p>
               </div>
+            )}
+
+            {activeTab === 'reviews' && (
+              <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
+                <h3 className="text-xl font-bold mb-4">Customer Reviews</h3>
+                <div className="p-4 bg-slate-950 rounded-xl border border-slate-800">
+                  <div className="flex text-amber-400 mb-2">★★★★★</div>
+                  <p className="text-sm text-slate-300">"Absolute game-changer for our business! Delivered within 24 hours with stunning 3D aesthetics."</p>
+                  <span className="text-xs text-slate-500 mt-2 block">— Verified Client</span>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Admin Panel */
+          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-2xl font-bold">Admin Management Portal</h2>
+                <p className="text-xs text-slate-400">Manage orders, payment status, and client fulfillment.</p>
+              </div>
+              <span className="px-3 py-1 bg-cyan-500/10 text-cyan-400 text-xs font-bold rounded-full border border-cyan-500/20">Secure Admin Mode</span>
             </div>
 
-            <div className="flex space-x-3 pt-2">
-              <button 
-                onClick={() => setShowOrderModal(false)}
-                className="flex-1 py-3 bg-slate-800 text-slate-300 font-bold rounded-xl hover:bg-slate-700 transition text-sm"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={submitOrderConfirmation}
-                className="flex-1 py-3 bg-cyan-500 text-black font-bold rounded-xl hover:bg-cyan-400 transition text-sm shadow-lg shadow-cyan-500/20"
-              >
-                Confirm Order ({selectedPrice})
-              </button>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase">
+                    <th className="py-3 px-4">Order ID</th>
+                    <th className="py-3 px-4">Service</th>
+                    <th className="py-3 px-4">Price</th>
+                    <th className="py-3 px-4">Status Toggle</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 text-sm">
+                  {orders.map(o => (
+                    <tr key={o.id} className="hover:bg-slate-800/40">
+                      <td className="py-4 px-4 font-mono">#{o.id}</td>
+                      <td className="py-4 px-4 font-semibold text-white">{o.service}</td>
+                      <td className="py-4 px-4 text-cyan-400 font-bold">₹{o.price}</td>
+                      <td className="py-4 px-4">
+                        <button 
+                          onClick={() => togglePayment(o.id)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                            o.status === 'Paid' 
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20' 
+                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'
+                          }`}
+                        >
+                          {o.status} (Click to Toggle)
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </main>
     </div>
   );
 }
