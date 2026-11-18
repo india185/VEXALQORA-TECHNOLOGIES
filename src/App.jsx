@@ -3266,4 +3266,4 @@ const AdminPortalLayout = ({
       </main>
     </div>
   );
-};   
+};
