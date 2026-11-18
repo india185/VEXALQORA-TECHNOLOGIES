@@ -797,10 +797,7 @@ export default function App() {
   // 8. AUTHENTICATION HANDLERS (CLOUD USERNAME & PASSWORD)
   // ==========================================================================
   const handleCustomerLogin = async (mode, payload) => {
-    if (!fbUser) {
-      notify('error', 'Cloud database initializing. Please wait a moment.');
-      return;
-    }
+    
 
     const cleanPassword = (payload.password || '').trim();
     if (!cleanPassword || cleanPassword.length < 4) {
