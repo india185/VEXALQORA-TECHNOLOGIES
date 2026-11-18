@@ -1,5 +1,5 @@
 [build]
   # Install dependencies if they are missing (e.g. local/CLI deploys from a fresh checkout),
   # then build with Vite.
-  command = "([ -x node_modules/.bin/vite ] || npm ci --no-audit --no-fund) && npm run build"
+  command = "([ -f node_modules/vite/bin/vite.js ] && [ -x node_modules/@esbuild/linux-x64/bin/esbuild ] || npm ci --no-audit --no-fund) && npm run build"
   publish = "dist"
