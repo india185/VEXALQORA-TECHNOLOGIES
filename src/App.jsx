@@ -797,8 +797,6 @@ export default function App() {
   // 8. AUTHENTICATION HANDLERS (CLOUD USERNAME & PASSWORD)
   // ==========================================================================
   const handleCustomerLogin = async (mode, payload) => {
-    
-
     const cleanPassword = (payload.password || '').trim();
     if (!cleanPassword || cleanPassword.length < 4) {
       notify('error', 'Please enter a valid password (minimum 4 characters).');
