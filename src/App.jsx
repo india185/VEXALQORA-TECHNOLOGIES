@@ -56,11 +56,28 @@ import {
 } from 'firebase/firestore';
 
 // ============================================================================
-// 1. FIREBASE INITIALIZATION
+// 1. REAL FIREBASE INITIALIZATION (ENV + FALLBACK)
 // ============================================================================
+const envFirebaseConfig = {
+  apiKey: import.meta.env?.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env?.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env?.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env?.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env?.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env?.VITE_FIREBASE_APP_ID
+};
+
+const hasRealEnvConfig = Boolean(
+  envFirebaseConfig.apiKey &&
+    envFirebaseConfig.projectId &&
+    !String(envFirebaseConfig.apiKey).includes('DemoKey')
+);
+
 const firebaseConfig =
   typeof window.__firebase_config !== 'undefined'
     ? JSON.parse(window.__firebase_config)
+    : hasRealEnvConfig
+    ? envFirebaseConfig
     : {
         apiKey: 'AIzaSyDemoKeyForVexalqoraTech3DApp',
         authDomain: 'vexalqora-tech.firebaseapp.com',
@@ -76,7 +93,12 @@ const db = getFirestore(app);
 const appId =
   typeof window.__app_id !== 'undefined'
     ? window.__app_id
-    : 'vexalqora-technologies-3d-v4';
+    : import.meta.env?.VITE_APP_ID ||
+      firebaseConfig.appId ||
+      'vexalqora-technologies-3d-v4';
+
+// Secret Admin Entry Config (Sirf aapko pata hoga)
+const ADMIN_SECRET_HASH = '#vx-karna-1857';
 
 // ============================================================================
 // 2. CONFIGURATION & DATA CONSTANTS
@@ -594,6 +616,8 @@ const BackgroundThemePicker = ({ currentTheme, onSelectTheme }) => {
 export default function App() {
   const [fbUser, setFbUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
+  const [authError, setAuthError] = useState(null);
+  const [dbError, setDbError] = useState(null);
 
   // 3D Theme State
   const [bgTheme, setBgTheme] = useState(() => {
@@ -620,7 +644,7 @@ export default function App() {
 
   // Live Firestore Collections
   const [customers, setCustomers] = useState([]);
-  const [services, setServices] = useState([]);
+  const [services, setServices] = useState(INITIAL_SERVICES);
   const [projects, setProjects] = useState([]);
   const [orders, setOrders] = useState([]);
   const [tickets, setTickets] = useState([]);
@@ -643,10 +667,11 @@ export default function App() {
     }, 5000);
   };
 
-  // Firebase Auth Bootstrap & Cloud Listeners
+  // Firebase Auth Bootstrap
   useEffect(() => {
     const initAuth = async () => {
       try {
+        setAuthError(null);
         if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
           await signInWithCustomToken(auth, window.__initial_auth_token);
         } else {
@@ -654,91 +679,139 @@ export default function App() {
         }
       } catch (err) {
         console.error('Firebase Auth Init Error:', err);
+        setAuthError(err?.message || 'Firebase authentication failed.');
+      } finally {
+        setAuthReady(true);
       }
     };
     initAuth();
 
-    const unsub = onAuthStateChanged(auth, (user) => {
-      setFbUser(user);
-      setAuthReady(true);
-    });
+    const unsub = onAuthStateChanged(
+      auth,
+      (user) => {
+        setFbUser(user);
+        setAuthReady(true);
+      },
+      (err) => {
+        console.error('Auth state listener error:', err);
+        setAuthError(err?.message || 'Auth listener error.');
+        setAuthReady(true);
+      }
+    );
     return () => unsub();
   }, []);
 
+  // Cloud Firestore Listeners with Error Callbacks
   useEffect(() => {
     if (!fbUser) return;
+
+    const handleSnapError = (colName) => (err) => {
+      console.error(`Firestore [${colName}] error:`, err);
+      setDbError(err?.message || `Unable to sync ${colName} from Firestore.`);
+    };
 
     const unsubCustomers = onSnapshot(
       collection(db, 'artifacts', appId, 'public', 'data', 'customers'),
       (snap) => {
+        setDbError(null);
         setCustomers(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      }
+      },
+      handleSnapError('customers')
     );
 
     const unsubServices = onSnapshot(
       collection(db, 'artifacts', appId, 'public', 'data', 'services'),
       async (snap) => {
+        setDbError(null);
         if (snap.empty) {
+          setServices(INITIAL_SERVICES);
           for (const srv of INITIAL_SERVICES) {
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'services'), srv);
+            try {
+              await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'services'), srv);
+            } catch (e) {
+              console.error('Seed service error:', e);
+            }
           }
         } else {
           setServices(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
         }
-      }
+      },
+      handleSnapError('services')
     );
 
     const unsubProjects = onSnapshot(
       collection(db, 'artifacts', appId, 'public', 'data', 'projects'),
       (snap) => {
+        setDbError(null);
         setProjects(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      }
+      },
+      handleSnapError('projects')
     );
 
     const unsubOrders = onSnapshot(
       collection(db, 'artifacts', appId, 'public', 'data', 'orders'),
       (snap) => {
+        setDbError(null);
         setOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      }
+      },
+      handleSnapError('orders')
     );
 
     const unsubTickets = onSnapshot(
       collection(db, 'artifacts', appId, 'public', 'data', 'tickets'),
       (snap) => {
+        setDbError(null);
         setTickets(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      }
+      },
+      handleSnapError('tickets')
     );
 
     const unsubInvoices = onSnapshot(
       collection(db, 'artifacts', appId, 'public', 'data', 'invoices'),
       (snap) => {
+        setDbError(null);
         setInvoices(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      }
+      },
+      handleSnapError('invoices')
     );
 
     const unsubInquiries = onSnapshot(
       collection(db, 'artifacts', appId, 'public', 'data', 'inquiries'),
       (snap) => {
+        setDbError(null);
         setInquiries(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      }
+      },
+      handleSnapError('inquiries')
     );
 
     const unsubReviews = onSnapshot(
       collection(db, 'artifacts', appId, 'public', 'data', 'reviews'),
       (snap) => {
+        setDbError(null);
         setReviews(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      }
+      },
+      handleSnapError('reviews')
     );
 
     const unsubContent = onSnapshot(
       doc(db, 'artifacts', appId, 'public', 'data', 'siteConfig', 'main'),
       async (docSnap) => {
+        setDbError(null);
         if (docSnap.exists()) {
           setSiteContent(docSnap.data());
         } else {
-          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'siteConfig', 'main'), DEFAULT_SITE_CONTENT);
+          setSiteContent(DEFAULT_SITE_CONTENT);
+          try {
+            await setDoc(
+              doc(db, 'artifacts', appId, 'public', 'data', 'siteConfig', 'main'),
+              DEFAULT_SITE_CONTENT
+            );
+          } catch (e) {
+            console.error('Seed siteConfig error:', e);
+          }
         }
-      }
+      },
+      handleSnapError('siteConfig')
     );
 
     return () => {
@@ -769,16 +842,69 @@ export default function App() {
     }
   }, [customers]);
 
+  // Secret Admin Hash & Client Isolation Guard
+  useEffect(() => {
+    const syncSecretHash = () => {
+      if (window.location.hash === ADMIN_SECRET_HASH) {
+        if (role === 'customer') {
+          setCurrentRoute('/dashboard');
+          return;
+        }
+        setCurrentRoute('/admin/login');
+      } else if (
+        currentRoute.startsWith('/admin') &&
+        window.location.hash !== ADMIN_SECRET_HASH &&
+        !(role === 'admin' && adminSessionId)
+      ) {
+        setCurrentRoute(role === 'customer' ? '/dashboard' : '/');
+      }
+    };
+
+    syncSecretHash();
+    window.addEventListener('hashchange', syncSecretHash);
+    return () => window.removeEventListener('hashchange', syncSecretHash);
+  }, [currentRoute, role, adminSessionId]);
+
+  // Secret Keyboard Shortcut (Ctrl + Shift + K) for Admin Entry (Not for customer panel)
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'K' || e.key === 'k')) {
+        e.preventDefault();
+        if (role === 'customer') {
+          setCurrentRoute('/dashboard');
+          return;
+        }
+        window.location.hash = ADMIN_SECRET_HASH.slice(1);
+        setCurrentRoute('/admin/login');
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [role]);
+
   // Route Guard & Navigation
   const navigateTo = (targetPath) => {
     setMobileMenuOpen(false);
 
+    if (role === 'customer' && targetPath.startsWith('/admin')) {
+      setCurrentRoute('/dashboard');
+      return;
+    }
+
     if (targetPath === '/admin/dashboard') {
       if (role !== 'admin' || !adminSessionId) {
-        notify('error', 'ACCESS DENIED: Admin password required to access /admin/dashboard.');
-        setCurrentRoute('/admin/login');
+        if (window.location.hash === ADMIN_SECRET_HASH) {
+          setCurrentRoute('/admin/login');
+        } else {
+          setCurrentRoute('/');
+        }
         return;
       }
+    }
+
+    if (targetPath === '/admin/login' && window.location.hash !== ADMIN_SECRET_HASH && role !== 'admin') {
+      setCurrentRoute('/');
+      return;
     }
 
     if (targetPath === '/dashboard') {
@@ -873,7 +999,7 @@ export default function App() {
           name: fullName,
           email: cleanEmail,
           company: (payload.company || 'Enterprise Client').trim(),
-          phone: (payload.phone || '+91 91407 99915').trim(),
+          phone: (payload.phone || '+91 9839000000').trim(),
           role: 'customer',
           status: 'Active',
           createdAt: new Date().toISOString()
@@ -947,6 +1073,9 @@ export default function App() {
         console.error(e);
       }
     }
+    if (window.location.hash === ADMIN_SECRET_HASH) {
+      window.location.hash = '';
+    }
     setRole('guest');
     setActiveCustomer(null);
     setAdminSessionId(null);
@@ -972,6 +1101,15 @@ export default function App() {
 
       {/* Floating 3D Environment Customizer */}
       <BackgroundThemePicker currentTheme={bgTheme} onSelectTheme={handleSelectTheme} />
+
+      {/* Firebase / Cloud Status Alert if needed */}
+      {(authError || dbError || !hasRealEnvConfig) && (
+        <div className="fixed top-20 right-5 z-40 max-w-sm rounded-2xl bg-amber-950/90 border border-amber-500/40 px-4 py-2.5 text-[11px] font-mono text-amber-200 backdrop-blur-xl shadow-xl">
+          {authError || dbError
+            ? `Cloud Notice: ${authError || dbError}`
+            : 'Firebase env not set — using fallback config'}
+        </div>
+      )}
 
       {/* Global Notification Toast */}
       {toast && (
@@ -1151,12 +1289,17 @@ export default function App() {
       )}
 
       {/* ====================================================================
-          AREA 3A: ADMIN LOGIN (/admin/login)
+          AREA 3A: SECRET ADMIN LOGIN (ONLY VIA SECRET HASH / SHORTCUT)
       ==================================================================== */}
-      {currentRoute === '/admin/login' && (
+      {currentRoute === '/admin/login' && role !== 'customer' && window.location.hash === ADMIN_SECRET_HASH && (
         <AdminLoginView
           onAdminSubmit={handleAdminPasswordLogin}
-          onBackPublic={() => navigateTo('/')}
+          onBackPublic={() => {
+            if (window.location.hash === ADMIN_SECRET_HASH) {
+              window.location.hash = '';
+            }
+            navigateTo('/');
+          }}
         />
       )}
 
@@ -1185,7 +1328,7 @@ export default function App() {
 }
 
 // ============================================================================
-// 9. PUBLIC WEBSITE COMPONENT
+// 9. PUBLIC WEBSITE COMPONENT (NO ADMIN LINKS OR HINTS)
 // ============================================================================
 const PublicWebsiteLayout = ({
   publicSection,
@@ -1301,37 +1444,13 @@ const PublicWebsiteLayout = ({
                   Logout
                 </button>
               </>
-            ) : role === 'admin' ? (
-              <>
-                <button
-                  onClick={() => navigateTo('/admin/dashboard')}
-                  className="px-4 py-2.5 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold"
-                >
-                  Admin Panel
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="px-3.5 py-2.5 rounded-xl bg-slate-800/90 text-slate-300 hover:text-white text-xs font-semibold"
-                >
-                  Logout
-                </button>
-              </>
             ) : (
-              <>
-                <button
-                  onClick={() => navigateTo('/login')}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-600 text-slate-950 text-xs font-extrabold shadow-[0_0_25px_rgba(6,182,212,0.35)] hover:opacity-95 transition"
-                >
-                  Customer Login
-                </button>
-                <button
-                  onClick={() => navigateTo('/admin/login')}
-                  title="Admin Access"
-                  className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-400 hover:text-rose-400 hover:border-rose-500/40 transition"
-                >
-                  <Lock className="w-4 h-4" />
-                </button>
-              </>
+              <button
+                onClick={() => navigateTo('/login')}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-600 text-slate-950 text-xs font-extrabold shadow-[0_0_25px_rgba(6,182,212,0.35)] hover:opacity-95 transition"
+              >
+                Customer Login
+              </button>
             )}
           </div>
 
@@ -1380,15 +1499,6 @@ const PublicWebsiteLayout = ({
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-600 text-slate-950 font-bold text-sm"
               >
                 {role === 'customer' ? 'Customer Dashboard' : 'Customer Login / Register'}
-              </button>
-              <button
-                onClick={() => {
-                  navigateTo(role === 'admin' ? '/admin/dashboard' : '/admin/login');
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full py-3 rounded-xl bg-slate-900 border border-rose-500/30 text-rose-300 font-semibold text-sm"
-              >
-                Admin Login
               </button>
             </div>
           </div>
@@ -1617,7 +1727,7 @@ const PublicWebsiteLayout = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {services.map((srv, idx) => (
                 <TiltCard3D
-                  key={srv.id}
+                  key={srv.id || srv.title}
                   glowColor={idx === 0 ? 'cyan' : idx === 1 ? 'violet' : 'emerald'}
                   className="p-8 flex flex-col justify-between space-y-6"
                 >
@@ -1910,7 +2020,7 @@ const CustomerAuthView = ({ onAuthSubmit, onBackPublic }) => {
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+91..."
+                    placeholder="+91 9839000000"
                     className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm"
                   />
                 </div>
@@ -2347,12 +2457,12 @@ const CustomerPortalLayout = ({
           </nav>
         </div>
 
-        {/* CONDITIONAL WHATSAPP BUTTON UPON REVIEW SUBMISSION (+91919638667) */}
+        {/* CONDITIONAL WHATSAPP BUTTON UPON REVIEW SUBMISSION */}
         {showWhatsAppButton && (
           <div className="my-3 p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/50 space-y-2 animate-bounce">
             <div className="text-[10px] font-mono text-emerald-300 uppercase">Review Submitted!</div>
             <a
-              href={`https://wa.me/91919638667?text=${encodeURIComponent(
+              href={`https://wa.me/919839000000?text=${encodeURIComponent(
                 `Hello VEXALQORA Team, my name is ${customer.name}. I have submitted my review and want to discuss my project orders.`
               )}`}
               target="_blank"
@@ -2708,7 +2818,7 @@ const CustomerPortalLayout = ({
 };
 
 // ============================================================================
-// 12. ADMIN LOGIN VIEW (/admin/login)
+// 12. SECRET ADMIN LOGIN VIEW
 // ============================================================================
 const AdminLoginView = ({ onAdminSubmit, onBackPublic }) => {
   const [password, setPassword] = useState('');
@@ -3029,7 +3139,7 @@ const AdminPortalLayout = ({
                     rows={3}
                     value={newProject.launchedFileCode}
                     onChange={(e) => setNewProject({ ...newProject, launchedFileCode: e.target.value })}
-                    placeholder="Paste website source code / make notes for client view..."
+                    placeholder="Paste website source code / notes for client view..."
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm font-mono"
                   />
                 </div>
@@ -3217,6 +3327,7 @@ const AdminPortalLayout = ({
                     placeholder="Type admin reply..."
                     onKeyDown={async (e) => {
                       if (e.key === 'Enter') {
+                        e.preventDefault();
                         const val = e.target.value;
                         if (!val) return;
                         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tickets', t.id), {
